@@ -1,89 +1,161 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
+import axios from 'axios'
+
+
+const initialMessage = ''
+const initialEmail = ''
+const initialSteps = 0
+const initialIndex = 4 
 
 export default function AppFunctional(props) {
-  const [message, setMessage] = useState('');
-  const [email, setEmail] = useState('');
-  const [steps, setSteps] = useState(0);
-  const [index, setIndex] = useState(4); // Center of a 3x3 grid
+  const [message, setMessage] = useState(initialMessage)
+  const [email, setEmail] = useState(initialEmail)
+  const [steps, setSteps] = useState(initialSteps)
+  const [index, setIndex] = useState(initialIndex)
+  
 
-  // Convert the 1D index to 2D coordinates for display
-  const getXY = () => {
-    const x = index % 3 + 1; // Assuming the grid starts at 1,1 at top-left
-    const y = Math.floor(index / 3) + 1;
-    return { x, y };
-  };
+  function getXY() {
+    
+    if (index === 0) return 'Coordinates (1,1)';
+    if (index === 1) return 'Coordinates (2,1)';
+    if (index === 2) return 'Coordinates (3,1)';
+    if (index === 3) return 'Coordinates (1,2)';
+    if (index === 4) return 'Coordinates (2,2)';
+    if (index === 5) return 'Coordinates (3,2)';
+    if (index === 6) return 'Coordinates (1,3)';
+    if (index === 7) return 'Coordinates (2,3)';
+    if (index === 8) return 'Coordinates (3,3)';
+  }
 
-  const reset = () => {
-    setMessage('');
-    setEmail('');
-    setSteps(0);
-    setIndex(4); // Reset to center position
-  };
+  function reset() {
+    
+    setMessage(initialMessage)
+    setEmail(initialEmail)
+    setSteps(initialSteps)
+    setIndex(initialIndex)
+  }
 
-  const getNextIndex = (direction) => {
-    const map = {
-      up: index > 2 ? index - 3 : index,
-      down: index < 6 ? index + 3 : index,
-      left: index % 3 !== 0 ? index - 1 : index,
-      right: index % 3 !== 2 ? index + 1 : index,
-    };
-    return map[direction];
-  };
+  function getNextIndex(direction) {
+    
+    let nextIndex = index;
 
-  const move = (direction) => {
-    const nextIndex = getNextIndex(direction);
-    if (index !== nextIndex) {
-      setIndex(nextIndex);
-      setSteps(steps + 1);
-      setMessage(''); // Clear message on successful move
-    } else {
-      setMessage(`You can't go ${direction}`);
+    switch (direction) {
+      case 'left':
+        if (index % 3 !== 0) {
+          nextIndex = index - 1;
+        }
+        break;
+      case 'up':
+        if (index > 2) {
+          nextIndex = index - 3;
+        }
+        break;
+      case 'right':
+        if (index % 3 !== 2) {
+          nextIndex = index + 1;
+        }
+        break;
+      case 'down':
+        if (index < 6) {
+          nextIndex = index + 3;
+        }
+        break;
+      default:
+        break;
     }
-  };
 
-  const onSubmit = (evt) => {
+    return nextIndex;
+  }
+
+  function move(evt) {
+   
+    const direction = evt.target.id
+    const nextIndex = getNextIndex(direction)
+    let cantGoMessage = ''
+
+    if (nextIndex !== index) {
+      setIndex(nextIndex)
+      setSteps(steps + 1)
+    } else {
+      switch (direction) {
+        case 'left':
+          cantGoMessage = "You can't go left";
+          break;
+        case 'up':
+          cantGoMessage = "You can't go up";
+          break;
+        case 'right':
+          cantGoMessage = "You can't go right";
+          break;
+        case 'down':
+          cantGoMessage = "You can't go down";
+          break;
+        default:
+          break;
+      }
+      setMessage( cantGoMessage)
+    }
+
+  }
+
+  function onChange(evt) {
+    setEmail(evt.target.value)
+  }
+
+  function onSubmit(evt) {
+    
     evt.preventDefault();
-    // Validation and success message logic
-    if (!email) {
-      setMessage('Ouch: email is required');
-    } else if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setMessage('Ouch: email must be a valid email');
-    } else if (email === 'foo@bar.baz') {
-      setMessage('foo@bar.baz failure #71');
-    } else {
-      // Example success message, adjust according to your logic
-      const successNumber = Math.floor(Math.random() * 100) + 1;
-      setMessage(`${email} win #${successNumber}`);
-      setEmail(''); // Clear email input on successful submission
-      reset(); // Reset coordinates and steps
+    const x = (index % 3) + 1;
+    const y = Math.floor(index / 3) + 1;
+
+    const payload = {
+      x: x,
+      y: y,
+      steps: steps,
+      email: email,
     }
-  };
+
+    axios.post('http://localhost:9000/api/result', payload)
+      .then(res => {
+        setMessage(res.data.message)
+      })
+      .catch(err => {
+        setMessage(err.response.data.message);
+
+      })
+
+      setEmail(initialEmail)
+  }
 
   return (
     <div id="wrapper" className={props.className}>
       <div className="info">
-        <h3 id="coordinates">Coordinates ({getXY().x}, {getXY().y})</h3>
-        <h3 id="steps">You moved {steps} {steps === 1 ? 'time' : 'times'}</h3>
+        <h3 id="coordinates">{getXY()}</h3>
+        <h3 id="steps">{`You moved ${steps} time${steps === 1 ? '':'s' }`}</h3>
       </div>
       <div id="grid">
-        {[...Array(9)].map((_, idx) => (
-          <div key={idx} className={`square${idx === index ? ' active' : ''}`}>{idx === index ? 'B' : null}</div>
-        ))}
+        {
+          [0, 1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
+            <div key={idx} className={`square${index === idx ? ' active' : ''}`}>
+              {index === idx ? 'B' : null}
+            </div>
+          ))
+        }
       </div>
       <div className="info">
         <h3 id="message">{message}</h3>
       </div>
       <div id="keypad">
-        <button id="left" onClick={() => move('left')}>LEFT</button>
-        <button id="up" onClick={() => move('up')}>UP</button>
-        <button id="right" onClick={() => move('right')}>RIGHT</button>
-        <button id="down" onClick={() => move('down')}>DOWN</button>
+        <button id="left" onClick={move}>LEFT</button>
+        <button id="up" onClick={move}>UP</button>
+        <button id="right" onClick={move}>RIGHT</button>
+        <button id="down" onClick={move}>DOWN</button>
         <button id="reset" onClick={reset}>reset</button>
       </div>
       <form onSubmit={onSubmit}>
-        <input id="email" type="email" placeholder="type email" value={email} onChange={(evt) => setEmail(evt.target.value)} />
-        <input id="submit" type="submit" value="Submit" />
+        <input id="email" type="email" placeholder="type email" value={email} onChange={onChange}></input>
+        <input id="submit" type="submit"></input>
       </form>
     </div>
-  );
+  )
 }

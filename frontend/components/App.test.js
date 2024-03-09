@@ -1,14 +1,27 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
-import AppFunctional from './AppFunctional'; // Adjust import path as necessary
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import AppFunctional from './AppFunctional'; 
 
-test('F1 FUNCTIONAL Actions: up, type email, submit Success message is correct', async () => {
-  render(<AppFunctional />);
-  fireEvent.click(screen.getByText('UP')); // Simulate moving up
-  fireEvent.change(screen.getByPlaceholderText('type email'), { target: { value: 'lady@gaga.com' } }); // Simulate typing the email
-  fireEvent.click(screen.getByText('Submit')); // Simulate submitting the form
+describe('AppFunctional Component', () => {
+  beforeEach(() => {
+    render(<AppFunctional />);
+  });
 
-  // Check for the specific success message
-  const successMessage = await screen.findByText(/lady win #\d+/);
-  expect(successMessage).toBeInTheDocument();
+  test('handles movement and updates position and steps', () => {
+    fireEvent.click(screen.getByText(/UP/i));
+    expect(screen.getByText('Coordinates (1, 1)')).toBeInTheDocument();
+    expect(screen.getByText(/You moved 1 time/)).toBeInTheDocument();
+  });
+
+  test('typing in the email input changes its value and submitting clears it', async () => {
+    const emailInput = screen.getByPlaceholderText(/type email/i);
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+    expect(emailInput.value).toBe('test@example.com');
+    fireEvent.click(screen.getByText('Submit'));
+    expect(emailInput.value).toBe('');
+    expect(screen.getByText(/test@example.com win #\d+/)).toBeInTheDocument();
+  });
+
+
 });
